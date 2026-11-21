@@ -4,66 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GTA 6 Live Widget</title>
-/* GTA VI VICE CITY NEON THEME */
-
-body {
-  background: transparent !important;
-  color: #ffffff !important;
-  font-family: Arial, sans-serif !important;
-}
-
-.panel {
-  background: linear-gradient(145deg, #160d25 0%, #101a35 55%, #071c2b 100%) !important;
-  border: 2px solid #ff42bd !important;
-  border-radius: 22px !important;
-  box-shadow: 0 0 18px #ff42bd88, 0 0 30px #24dfff55 !important;
-  color: white !important;
-}
-
-h1, h2 {
-  color: #ff70d2 !important;
-  text-shadow: 0 0 12px #ff24b8 !important;
-}
-
-.stats {
-  gap: 12px !important;
-}
-
-.stat {
-  background: linear-gradient(135deg, #291333, #102b48) !important;
-  border: 1px solid #38dfff !important;
-  border-radius: 14px !important;
-  box-shadow: 0 0 12px #27dfff44 !important;
-  color: white !important;
-}
-
-.mission {
-  background: linear-gradient(90deg, #25112f, #102b43) !important;
-  border: 1px solid #ed55c5 !important;
-  border-radius: 12px !important;
-  color: white !important;
-  margin-bottom: 8px !important;
-}
-
-.done {
-  border-color: #35e6ff !important;
-  background: linear-gradient(90deg, #143b50, #25123d) !important;
-  box-shadow: 0 0 10px #35e6ff55 !important;
-}
-
-.footer {
-  color: #54dcff !important;
-  text-shadow: 0 0 8px #35dfff !important;
-}
-
-.bar, .progress {
-  background: linear-gradient(90deg, #ff35b8, #39dcff) !important;
-  box-shadow: 0 0 12px #ff35b8 !important;
-  border-radius: 20px !important;
-}
 
 <style>
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -133,6 +78,7 @@ body {
   height: 100%;
   width: 0%;
   background: #26e6cf;
+  transition: width .4s;
 }
 
 .mission {
@@ -162,6 +108,7 @@ body {
   font-size: 10px;
   margin-top: 12px;
 }
+
 </style>
 </head>
 
@@ -201,81 +148,74 @@ body {
 
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"
+  onerror="document.getElementById('status').textContent='ОШИБКА ЗАГРУЗКИ FIREBASE';">
+</script>
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"
+  onerror="document.getElementById('status').textContent='ОШИБКА БАЗЫ FIREBASE';">
+</script>
 
 <script>
 
-// FIREBASE CONFIG
+const defaultRanks = [
+  "Нищий",
+  "Уличный делец",
+  "Предприниматель",
+  "Бизнес-магнат",
+  "Миллионер"
+];
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA7cibhFQfUqPwnuGRq0-XR7hyLmQ4p_7E",
-  authDomain: "gta6wid.firebaseapp.com",
-  databaseURL: "https://gta6wid-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "gta6wid",
-  storageBucket: "gta6wid.firebasestorage.app",
-  messagingSenderId: "1099205168563",
-  appId: "1:1099205168563:web:f8e10e8e6b140be175cfc6"
-};
+const $ = id => document.getElementById(id);
 
-firebase.initializeApp(firebaseConfig);
+function showError(message) {
+  $("status").textContent = message;
+  $("rank").textContent = "Нет подключения";
+}
 
-const db = firebase.database();
-
-const names=["Нищий","Уличный делец","Предприниматель","Бизнес-магнат","Миллионер"];
-
-const defaultState = {
-  money: 0,
-  rank: 0,
-  ranks: defaultRanks.map(name => ({
-    name,
-    missions: Array.from({length: 10}, (_, i) => ({
-      text: "Миссия " + (i + 1),
-      done: false
-    }))
-  }))
-};
-
-// ОБНОВЛЕНИЕ ВИДЖЕТА
-
-db.ref("gta6/state").on("value", snapshot => {
-
-  const state = snapshot.val() || defaultState;
+function render(state) {
 
   const rankNumber = Math.max(
     0,
     Math.min(4, Number(state.rank) || 0)
   );
 
-  const rank = state.ranks?.[rankNumber]
-    || defaultState.ranks[rankNumber];
+  const rank = state.ranks && state.ranks[rankNumber]
+    ? state.ranks[rankNumber]
+    : {};
 
   const money = Math.max(0, Number(state.money) || 0);
 
-  document.getElementById("rank").textContent =
-    rank.name || defaultRanks[rankNumber];
+  // Всегда используем утверждённые названия рангов
+  $("rank").textContent = defaultRanks[rankNumber];
 
-  document.getElementById("money").textContent =
+  $("money").textContent =
     money.toLocaleString("ru-RU") + " BYN";
 
-  document.getElementById("bar").style.width =
+  $("bar").style.width =
     Math.min(100, money / 10) + "%";
 
   const missions = Array.isArray(rank.missions)
-    ? rank.missions
-    : defaultState.ranks[rankNumber].missions;
+    ? rank.missions.slice(0, 10)
+    : [];
 
   const completed = missions.filter(
     mission => mission && mission.done
   ).length;
 
-  document.getElementById("progress").textContent =
-    completed + " / 10";
+  $("progress").textContent = completed + " / 10";
 
-  const container = document.getElementById("missions");
+  const container = $("missions");
   container.innerHTML = "";
 
-  missions.slice(0, 10).forEach((mission, index) => {
+  for (let i = 0; i < 10; i++) {
+
+    const mission = missions[i] || {
+      text: "Миссия " + (i + 1),
+      done: false
+    };
 
     const row = document.createElement("div");
     row.className = "mission";
@@ -286,7 +226,7 @@ db.ref("gta6/state").on("value", snapshot => {
 
     const name = document.createElement("span");
     name.textContent =
-      mission.text || ("Миссия " + (index + 1));
+      mission.text || ("Миссия " + (i + 1));
 
     if (mission.done) {
       name.className = "done";
@@ -294,22 +234,79 @@ db.ref("gta6/state").on("value", snapshot => {
 
     row.appendChild(check);
     row.appendChild(name);
-
     container.appendChild(row);
+  }
 
-  });
-
-  document.getElementById("status").textContent =
+  $("status").textContent =
     "● LIVE • СИНХРОНИЗАЦИЯ";
+}
 
-}, error => {
+function startWidget() {
 
-  document.getElementById("status").textContent =
-    "ОШИБКА ПОДКЛЮЧЕНИЯ";
+  if (!window.firebase) {
+    showError("FIREBASE НЕ ЗАГРУЗИЛСЯ");
+    return;
+  }
 
-  console.error(error);
+  const firebaseConfig = {
+    apiKey: "AIzaSyA7cibhFQfUqPwnuGRq0-XR7hyLmQ4p_7E",
+    authDomain: "gta6wid.firebaseapp.com",
+    databaseURL: "https://gta6wid-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "gta6wid",
+    storageBucket: "gta6wid.firebasestorage.app",
+    messagingSenderId: "1099205168563",
+    appId: "1:1099205168563:web:f8e10e8e6b140be175cfc6"
+  };
 
-});
+  try {
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    const db = firebase.database();
+    const ref = db.ref("gta6/state");
+
+    let received = false;
+
+    const timeout = setTimeout(() => {
+      if (!received) {
+        showError("СЕРВЕР НЕ ОТВЕЧАЕТ");
+      }
+    }, 15000);
+
+    ref.on("value", snapshot => {
+
+      received = true;
+      clearTimeout(timeout);
+
+      const state = snapshot.val();
+
+      if (!state) {
+        showError("НЕТ ДАННЫХ В FIREBASE");
+        return;
+      }
+
+      render(state);
+
+    }, error => {
+
+      clearTimeout(timeout);
+
+      showError("ОШИБКА FIREBASE: " + error.message);
+      console.error(error);
+
+    });
+
+  } catch (error) {
+
+    showError("ОШИБКА: " + error.message);
+    console.error(error);
+
+  }
+}
+
+startWidget();
 
 </script>
 
