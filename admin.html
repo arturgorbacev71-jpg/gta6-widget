@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GTA 6 Admin</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#0b1118;color:white;font-family:Arial,sans-serif}
+main{max-width:600px;margin:auto}
+.card{background:#17212c;border:1px solid #304050;border-radius:14px;padding:16px;margin:12px 0}
+h1{color:#35e5ce;font-size:24px}
+label{display:block;color:#aab8c6;font-size:13px;margin:12px 0 6px}
+input,select,button{width:100%;padding:12px;border-radius:9px;border:1px solid #405164;background:#0d151e;color:white;font-size:16px}
+button{background:#35e5ce;color:#071411;font-weight:bold;border:0;margin-top:12px}
+.mission{display:flex;gap:10px;align-items:center;margin:9px 0}
+.mission input[type=checkbox]{width:23px;height:23px}
+.msg{color:#35e5ce;font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<h1>GTA 6 — Пульт управления</h1>
+
+<div class="card" id="loginBox">
+<h2>Вход администратора</h2>
+<label>Email</label>
+<input id="email" type="email" placeholder="Твой email Firebase">
+<label>Пароль</label>
+<input id="password" type="password" placeholder="Пароль Firebase">
+<button id="login">ВОЙТИ</button>
+<p id="loginMsg" class="msg"></p>
+</div>
+
+<div id="control" hidden>
+<div class="card">
+<button id="logout">ВЫЙТИ</button>
+<h2>Баланс стрима</h2>
+<label>Сумма BYN (цель 1000 BYN)</label>
+<input id="money" type="number" min="0" step="0.01">
+<button id="saveMoney">СОХРАНИТЬ БАЛАНС</button>
+</div>
+
+<div class="card">
+<h2>Ранг и миссии</h2>
+<label>Выбери ранг</label>
+<select id="rank"></select>
+<div id="missions"></div>
+<button id="saveMissions">СОХРАНИТЬ МИССИИ</button>
+<p id="msg" class="msg"></p>
+</div>
+</div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA7cibhFQfUqPwnuGRq0-XR7hyLmQ4p_7E",
+  authDomain: "gta6wid.firebaseapp.com",
+  databaseURL: "https://gta6wid-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "gta6wid",
+  storageBucket: "gta6wid.firebasestorage.app",
+  messagingSenderId: "1099205168563",
+  appId: "1:1099205168563:web:f8e10e8e6b140be175cfc6"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.database();
+const ref=db.ref("gta6/state");
+
+const names=["Новичок","Уличный","Профи","Элита","Легенда"];
+let state={
+ money:0,rank:0,
+ ranks:names.map(name=>({
+  name,
+  missions:Array.from({length:10},(_,i)=>({
+   text:"Миссия "+(i+1),done:false
+  }))
+ }))
+};
+
+const $=id=>document.getElementById(id);
+
+function normalize(s){
+ if(!s || !Array.isArray(s.ranks)) return state;
+ return {
+  money:Number(s.money)||0,
+  rank:Math.max(0,Math.min(4,Number(s.rank)||0)),
+  ranks:names.map((name,i)=>{
+   const old=s.ranks[i]||{};
+   const list=Array.isArray(old.missions)?old.missions:[];
+   return {
+    name,
+    missions:Array.from({length:10},(_,j)=>({
+     text:(list[j]&&list[j].text)||"Миссия "+(j+1),
+     done:!!(list[j]&&list[j].done)
+    }))
+   };
+  })
+ };
+}
+
+function render(){
+ $("money").value=state.money;
+ $("rank").innerHTML="";
+ names.forEach((name,i)=>{
+  const option=document.createElement("option");
+  option.value=i;
+  option.textContent=(i+1)+". "+name;
+  $("rank").append(option);
+ });
+ $("rank").value=state.rank;
+ renderMissions();
+}
+
+function renderMissions(){
+ const r=Number($("rank").value||0);
+ $("missions").innerHTML="";
+ state.ranks[r].missions.forEach((m,i)=>{
+  const row=document.createElement("div");
+  row.className="mission";
+  const check=document.createElement("input");
+  check.type="checkbox";
+  check.id="check"+i;
+  check.checked=m.done;
+  const input=document.createElement("input");
+  input.type="text";
+  input.id="text"+i;
+  input.value=m.text;
+  row.append(check,input);
+  $("missions").append(row);
+ });
+}
+
+$("rank").onchange=renderMissions;
+
+$("login").onclick=async()=>{
+ $("loginMsg").textContent="Вход...";
+ try{
+  await auth.signInWithEmailAndPassword(
+   $("email").value.trim(),
+   $("password").value
+  );
+ }catch(e){
+  $("loginMsg").textContent="Ошибка: "+e.message;
+ }
+};
+
+$("logout").onclick=()=>auth.signOut();
+
+auth.onAuthStateChanged(async user=>{
+ if(!user){
+  $("loginBox").hidden=false;
+  $("control").hidden=true;
+  return;
+ }
+ $("loginBox").hidden=true;
+ $("control").hidden=false;
+ try{
+  const snap=await ref.once("value");
+  if(snap.exists()) state=normalize(snap.val());
+  else await ref.set(state);
+  render();
+  ref.on("value",s=>{
+   if(s.exists()){state=normalize(s.val());render();}
+  });
+ }catch(e){
+  $("msg").textContent="Ошибка базы: "+e.message;
+ }
+});
+
+$("saveMoney").onclick=async()=>{
+ state.money=Math.max(0,Number($("money").value)||0);
+ try{
+  await ref.update({money:state.money});
+  $("msg").textContent="Баланс сохранён!";
+ }catch(e){$("msg").textContent="Ошибка: "+e.message;}
+};
+
+$("saveMissions").onclick=async()=>{
+ const r=Number($("rank").value);
+ state.ranks[r].missions=Array.from({length:10},(_,i)=>({
+  text:$("text"+i).value.trim()||"Миссия "+(i+1),
+  done:$("check"+i).checked
+ }));
+ state.rank=r;
+ try{
+  await ref.set(state);
+  $("msg").textContent="Миссии и ранг сохранены!";
+ }catch(e){$("msg").textContent="Ошибка: "+e.message;}
+};
+</script>
+</body>
+</html>
