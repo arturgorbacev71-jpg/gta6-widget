@@ -1,54 +1,266 @@
-<!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GTA 6 — BYN missions</title>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GTA 6 Live Widget</title>
+
 <style>
-:root{--pink:#ff2ca8;--violet:#8b35ff;--green:#39ef91}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:transparent;font-family:Arial,sans-serif;color:#fff}body{padding:18px}
-.hud{width:470px;max-width:calc(100vw - 36px);padding:18px 20px;border:1px solid #b52bcb;border-radius:17px;background:linear-gradient(130deg,rgba(10,7,22,.96),rgba(42,8,53,.94));box-shadow:0 0 25px #a21b9944;position:relative;overflow:hidden}
-.hud:before{content:"";position:absolute;inset:0 0 auto;height:4px;background:linear-gradient(90deg,var(--pink),var(--violet),#ff8c36)}
-.top,.moneyline,.bottom,.missionhead{display:flex;justify-content:space-between;align-items:center;gap:10px}.top{margin-bottom:12px}.kicker{font-size:11px;letter-spacing:2px;color:#ff8bd4;font-weight:800}.live{background:#e51d55;padding:5px 9px;border-radius:6px;font-size:11px;font-weight:bold}
-.rank{font-size:25px;font-weight:900;text-transform:uppercase;text-shadow:0 2px 12px #a322b8}.mission{font-size:13px;color:#ddd;margin-top:5px}
-.moneyline{margin-top:15px;align-items:baseline}.money{font-size:29px;font-weight:900;color:var(--green)}.goal{font-size:13px;font-weight:bold}.track{height:11px;background:#ffffff22;border-radius:20px;margin-top:8px;overflow:hidden}.fill{height:100%;width:0;background:linear-gradient(90deg,#ff269f,#9c3cff,#39ef91);transition:width .2s}
-.bottom{font-size:11px;color:#c9b8d1;margin-top:6px}.missionbox{margin-top:15px;border-top:1px solid #ffffff25;padding-top:12px}.missionhead{font-size:13px;font-weight:900;color:#ff8bd4;margin-bottom:8px}.count{color:var(--green)}
-.tasks{display:grid;gap:5px}.task{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;background:#ffffff0b;border:1px solid #ffffff14;font-size:12px;line-height:1.25}.task.done{border-color:#39ef9166;background:#39ef9112;color:#caffdf}.task input{accent-color:#39ef91;width:16px;height:16px;flex:none}.task span{flex:1}.task.done span{text-decoration:line-through;opacity:.8}
-.editbtn{margin-top:11px;border:1px solid #a34ce2;background:#251132;color:#fff;border-radius:8px;padding:7px 10px;font-size:11px;cursor:pointer}.panel{display:none;margin-top:12px;padding-top:12px;border-top:1px solid #ffffff25;gap:8px}.panel.open{display:grid;grid-template-columns:1fr 1fr}label{font-size:11px;color:#d9c3e8;display:block;margin-bottom:4px}input[type=number],select,.missionedit{width:100%;padding:8px;border-radius:7px;border:1px solid #75418e;background:#160d21;color:#fff;font-size:13px}.wide{grid-column:1/-1}.missionedit{margin:3px 0}.hint{font-size:10px;color:#bda9c8;grid-column:1/-1}
-@media(max-width:500px){body{padding:8px}.hud{max-width:calc(100vw - 16px);padding:14px}.rank{font-size:21px}.task{font-size:11px}}
-</style></head><body><section class="hud">
-<div class="top"><div class="kicker">VICE CITY • REAL LIFE</div><div class="live">● LIVE</div></div>
-<div class="rank" id="rank">1. НИЩИЙ</div><div class="mission" id="mission">Миссия: Начало пути</div>
-<div class="moneyline"><div class="money" id="money">0 BYN</div><div class="goal">ЦЕЛЬ: 1 000 BYN</div></div>
-<div class="track"><div class="fill" id="fill"></div></div><div class="bottom"><span id="percent">0% выполнено</span><span>ДО ЦЕЛИ</span></div>
-<div class="missionbox"><div class="missionhead"><span>МИССИИ ТЕКУЩЕГО РАНГА</span><span class="count" id="taskCount">0/10</span></div><div class="tasks" id="tasks"></div></div>
-<button class="editbtn" id="toggle">⚙ ИЗМЕНИТЬ</button>
-<div class="panel" id="panel">
-<div><label for="rankInput">Ранг</label><select id="rankInput"><option>1. Нищий</option><option>2. Уличный делец</option><option>3. Предприниматель</option><option>4. Бизнес-магнат</option><option>5. Миллионер</option></select></div>
-<div><label for="moneyInput">Баланс, BYN</label><input id="moneyInput" type="number" min="0" value="0"></div>
-<div class="wide"><label for="missionInput">Текущая миссия / описание</label><input class="missionedit" id="missionInput" value="Начало пути" maxlength="70"></div>
-<div class="wide"><label>Названия 10 миссий этого ранга</label><div id="editTasks"></div></div>
-<div class="hint">Отмечай выполненные миссии галочками прямо в списке. Прогресс сохраняется в этом браузере.</div>
-</div></section>
-<script>
-const $=id=>document.getElementById(id), ranks=['1. Нищий','2. Уличный делец','3. Предприниматель','4. Бизнес-магнат','5. Миллионер'];
-const defaults=[
-['Найти первую подработку','Заработать первые 10 BYN','Познакомиться с полезным человеком','Выполнить небольшое поручение','Найти способ заработать ещё','Сделать доброе дело','Найти постоянную подработку','Накопить 25 BYN','Избежать лишних трат','Заработать 50 BYN'],
-['Найти клиента','Выполнить заказ','Заработать 75 BYN','Продать ненужную вещь','Найти второй источник дохода','Помочь местному бизнесу','Получить хороший отзыв','Закрыть три заказа','Накопить 100 BYN','Заработать 150 BYN'],
-['Придумать бизнес-идею','Найти первого покупателя','Запустить услугу','Получить первую прибыль','Найти партнёра','Реинвестировать доход','Привлечь пять клиентов','Выполнить крупный заказ','Накопить 200 BYN','Заработать 300 BYN'],
-['Открыть новое направление','Заключить выгодную сделку','Нанять помощника','Увеличить продажи','Найти крупного клиента','Запустить рекламу','Получить повторный заказ','Увеличить капитал','Накопить 400 BYN','Заработать 500 BYN'],
-['Закрыть большую сделку','Создать источник пассивного дохода','Расширить бизнес','Помочь новичку стартовать','Выполнить VIP-заказ','Увеличить капитал','Открыть новый проект','Достичь финансовой независимости','Накопить 750 BYN','Достичь 1 000 BYN']
-];
-let saved={};try{saved=JSON.parse(localStorage.getItem('gta6hud')||'{}')}catch(e){}
-let rank=saved.rank||ranks[0], money=saved.money||0, desc=saved.mission||'Начало пути';
-let names=saved.names||Object.fromEntries(ranks.map((r,i)=>[r,defaults[i]])), checks=saved.checks||Object.fromEntries(ranks.map(r=>[r,Array(10).fill(false)]));
-$('rankInput').value=rank;$('moneyInput').value=money;$('missionInput').value=desc;
-function persist(){try{localStorage.setItem('gta6hud',JSON.stringify({rank,money,mission:desc,names,checks}))}catch(e){}}
-function render(){
- $('rank').textContent=rank;$('mission').textContent='Миссия: '+(desc||'Не указана');$('money').textContent=new Intl.NumberFormat('ru-RU').format(money)+' BYN';
- let pct=Math.min(100,money/10);$('fill').style.width=pct+'%';$('percent').textContent=Math.round(pct)+'% выполнено';
- let done=checks[rank].filter(Boolean).length;$('taskCount').textContent=done+'/10';
- $('tasks').innerHTML='';names[rank].forEach((n,i)=>{let label=document.createElement('label');label.className='task'+(checks[rank][i]?' done':'');let cb=document.createElement('input');cb.type='checkbox';cb.checked=checks[rank][i];cb.addEventListener('change',()=>{checks[rank][i]=cb.checked;persist();render()});let span=document.createElement('span');span.textContent=(i+1)+'. '+n;label.append(cb,span);$('tasks').append(label)});
- $('editTasks').innerHTML='';names[rank].forEach((n,i)=>{let inp=document.createElement('input');inp.className='missionedit';inp.value=n;inp.maxLength=90;inp.setAttribute('aria-label','Миссия '+(i+1));inp.addEventListener('change',()=>{names[rank][i]=inp.value;persist();render()});$('editTasks').append(inp)});
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 10px;
+  background: transparent;
+  color: white;
+  font-family: Arial, sans-serif;
 }
-$('rankInput').addEventListener('change',e=>{rank=e.target.value;render();persist()});
-$('moneyInput').addEventListener('input',e=>{money=Math.max(0,Number(e.target.value)||0);render();persist()});
-$('missionInput').addEventListener('input',e=>{desc=e.target.value;render();persist()});
-$('toggle').addEventListener('click',()=>{$('panel').classList.toggle('open');$('toggle').textContent=$('panel').classList.contains('open')?'✕ ЗАКРЫТЬ':'⚙ ИЗМЕНИТЬ'});
-render();
-</script></body></html>
+
+.panel {
+  max-width: 750px;
+  margin: auto;
+  padding: 18px;
+  background: rgba(8,12,18,.95);
+  border: 2px solid #26e6cf;
+  border-radius: 16px;
+}
+
+.header {
+  color: #26e6cf;
+  font-size: 13px;
+  letter-spacing: 3px;
+  font-weight: bold;
+}
+
+.rank {
+  color: #ffd166;
+  font-size: 28px;
+  font-weight: bold;
+  margin: 8px 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.stat {
+  background: #17212c;
+  padding: 13px;
+  border-radius: 12px;
+}
+
+.label {
+  color: #9aabba;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.value {
+  font-size: 23px;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+.bar {
+  height: 9px;
+  background: #34414e;
+  border-radius: 10px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  width: 0%;
+  background: #26e6cf;
+}
+
+.mission {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: #17212c;
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 7px;
+  font-size: 14px;
+}
+
+.check {
+  color: #26e6cf;
+  font-size: 19px;
+}
+
+.done {
+  text-decoration: line-through;
+  color: #84929e;
+}
+
+.footer {
+  text-align: right;
+  color: #26e6cf;
+  font-size: 10px;
+  margin-top: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="panel">
+
+  <div class="header">GTA VI • LIVE CHALLENGE</div>
+
+  <div class="rank" id="rank">Загрузка...</div>
+
+  <div class="stats">
+
+    <div class="stat">
+      <div class="label">Баланс</div>
+      <div class="value" id="money">0 BYN</div>
+    </div>
+
+    <div class="stat">
+      <div class="label">Цель стрима</div>
+      <div class="value">1000 BYN</div>
+      <div class="bar">
+        <div class="fill" id="bar"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="label">Миссии текущего ранга</div>
+  <div class="label" id="progress">0 / 10</div>
+
+  <div id="missions"></div>
+
+  <div class="footer" id="status">
+    ПОДКЛЮЧЕНИЕ...
+  </div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+
+// FIREBASE CONFIG
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA7cibhFQfUqPwnuGRq0-XR7hyLmQ4p_7E",
+  authDomain: "gta6wid.firebaseapp.com",
+  databaseURL: "https://gta6wid-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "gta6wid",
+  storageBucket: "gta6wid.firebasestorage.app",
+  messagingSenderId: "1099205168563",
+  appId: "1:1099205168563:web:f8e10e8e6b140be175cfc6"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.database();
+
+const defaultRanks = [
+  "Новичок",
+  "Уличный",
+  "Профи",
+  "Элита",
+  "Легенда"
+];
+
+const defaultState = {
+  money: 0,
+  rank: 0,
+  ranks: defaultRanks.map(name => ({
+    name,
+    missions: Array.from({length: 10}, (_, i) => ({
+      text: "Миссия " + (i + 1),
+      done: false
+    }))
+  }))
+};
+
+// ОБНОВЛЕНИЕ ВИДЖЕТА
+
+db.ref("gta6/state").on("value", snapshot => {
+
+  const state = snapshot.val() || defaultState;
+
+  const rankNumber = Math.max(
+    0,
+    Math.min(4, Number(state.rank) || 0)
+  );
+
+  const rank = state.ranks?.[rankNumber]
+    || defaultState.ranks[rankNumber];
+
+  const money = Math.max(0, Number(state.money) || 0);
+
+  document.getElementById("rank").textContent =
+    rank.name || defaultRanks[rankNumber];
+
+  document.getElementById("money").textContent =
+    money.toLocaleString("ru-RU") + " BYN";
+
+  document.getElementById("bar").style.width =
+    Math.min(100, money / 10) + "%";
+
+  const missions = Array.isArray(rank.missions)
+    ? rank.missions
+    : defaultState.ranks[rankNumber].missions;
+
+  const completed = missions.filter(
+    mission => mission && mission.done
+  ).length;
+
+  document.getElementById("progress").textContent =
+    completed + " / 10";
+
+  const container = document.getElementById("missions");
+  container.innerHTML = "";
+
+  missions.slice(0, 10).forEach((mission, index) => {
+
+    const row = document.createElement("div");
+    row.className = "mission";
+
+    const check = document.createElement("span");
+    check.className = "check";
+    check.textContent = mission.done ? "✓" : "○";
+
+    const name = document.createElement("span");
+    name.textContent =
+      mission.text || ("Миссия " + (index + 1));
+
+    if (mission.done) {
+      name.className = "done";
+    }
+
+    row.appendChild(check);
+    row.appendChild(name);
+
+    container.appendChild(row);
+
+  });
+
+  document.getElementById("status").textContent =
+    "● LIVE • СИНХРОНИЗАЦИЯ";
+
+}, error => {
+
+  document.getElementById("status").textContent =
+    "ОШИБКА ПОДКЛЮЧЕНИЯ";
+
+  console.error(error);
+
+});
+
+</script>
+
+</body>
+</html>
